@@ -31,6 +31,7 @@ public class PlayerMovement : MonoBehaviour
         if(body.transform.position.y < 0.5)
         {
             body.transform.position = startPosition;
+            hasTouchedMove = false;
         }
     }
 
@@ -139,6 +140,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void MovePlayer(float horizontal, float vertical)
     {
-        body.AddForce(new Vector3(horizontal, 0, vertical));
+        body.AddForce(new Vector3(horizontal, 0, vertical), ForceMode.Impulse);
     }
 }
