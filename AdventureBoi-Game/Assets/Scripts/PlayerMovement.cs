@@ -7,12 +7,16 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 startPosition;
 
     private Rigidbody body;
-    private float moveForce = 10f;
+    private float moveSpeed = 5f;
+    private float moveMultiplier = 0.01f;
 
     private bool hasTouchedMove = false;
     private Vector2 initialTouchPointMove = new Vector2();
     private Vector2 nextTouchPointMove = new Vector2();
     private float moveDifferenceMultiplier = 5f;
+
+    public GameObject analogPrefab;
+    private GameObject activeAnalog;
 
     // Start is called before the first frame update
     void Start()
@@ -24,7 +28,7 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //CheckPCControls();
+        CheckPCControls();
         CheckPhoneControls();
 
         //Stop him from falling off
@@ -42,18 +46,27 @@ public class PlayerMovement : MonoBehaviour
             Touch t = Input.touches[i];
             Debug.Log("Position: " + CheckCoordinates(t.position));
 
-            if (CheckCoordinates(t.position) == "RD")
+            if (CheckCoordinates(t.position) == "LD")
             {
                 if (hasTouchedMove == false)
                 {
                     hasTouchedMove = true;
                     initialTouchPointMove = t.position;
                     nextTouchPointMove = t.position;
+
+                    activeAnalog = Instantiate(analogPrefab, new Vector3(initialTouchPointMove.x, initialTouchPointMove.y, -9f), Quaternion.identity);
                 }
                 //We've already set anchor
                 else
                 {
                     nextTouchPointMove = t.position;
+                }
+            }
+            else
+            {
+                if(activeAnalog != null)
+                {
+                    Destroy(activeAnalog);
                 }
             }
         }
@@ -62,6 +75,8 @@ public class PlayerMovement : MonoBehaviour
         {
             Vector2 move = CalculateMoveDifference();
             MovePlayer(move.x, move.y);
+
+            activeAnalog.GetComponent<AnalogController>().Rotate(move.x, move.y);
         }
 
         if(Input.touchCount == 0)
@@ -119,27 +134,28 @@ public class PlayerMovement : MonoBehaviour
         // Right
         if(Input.GetKey(KeyCode.D))
         {
-            MovePlayer(1 * moveForce, 0);
+            MovePlayer(1, 0);
         }
         //Left
         if (Input.GetKey(KeyCode.A))
         {
-            MovePlayer(-1 * moveForce, 0);
+            MovePlayer(-1, 0);
         }
         // Up
         if (Input.GetKey(KeyCode.W))
         {
-            MovePlayer(0, 1 * moveForce);
+            MovePlayer(0, 1);
         }
         // Down
         if (Input.GetKey(KeyCode.S))
         {
-            MovePlayer(0, -1 * moveForce);
+            MovePlayer(0, -1);
         }
     }
 
     private void MovePlayer(float horizontal, float vertical)
     {
-        body.AddForce(new Vector3(horizontal, 0, vertical), ForceMode.Impulse);
+        //body.AddForce(new Vector3(horizontal, 0, vertical), ForceMode.Impulse);
+        body.transform.position += new Vector3(horizontal, 0, vertical) * moveSpeed * moveMultiplier;
     }
 }
