@@ -41,3 +41,6 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Analog
+    uniqueID: 897455543
+    locked: 0

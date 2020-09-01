@@ -7,8 +7,8 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 startPosition;
 
     private Rigidbody body;
-    private float moveSpeed = 5f;
-    private float moveMultiplier = 0.01f;
+    private float moveSpeed = 0.05f;
+    private float maxSpeed = 0.05f;
 
     private bool hasTouchedMove = false;
     private Vector2 initialTouchPointMove = new Vector2();
@@ -18,18 +18,31 @@ public class PlayerMovement : MonoBehaviour
     public GameObject analogPrefab;
     private GameObject activeAnalog;
 
+    private Camera camera;
+    private float constCameraDistance = 10f;
+
+    private enum ScreenLocation
+    {
+        LU,
+        LD,
+        RU,
+        RD
+    }
+
     // Start is called before the first frame update
     void Start()
     {
         body = GetComponent<Rigidbody>();
+        camera = Camera.main;
         startPosition = body.transform.position;
     }
 
     // Update is called once per frame
     void Update()
     {
+        CheckMouseControls();
         CheckPCControls();
-        CheckPhoneControls();
+        //CheckPhoneControls();
 
         //Stop him from falling off
         if(body.transform.position.y < 0.5)
@@ -39,6 +52,59 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    private void CheckMouseControls()
+    {
+        if (Input.GetMouseButton(0))
+        {
+            if (hasTouchedMove == false)
+            {
+                hasTouchedMove = true;
+                initialTouchPointMove = Input.mousePosition;
+                nextTouchPointMove = Input.mousePosition;
+
+                //CalculateCameraDistance();
+
+                Vector3 mousePos = new Vector3(initialTouchPointMove.x, initialTouchPointMove.y, 1);
+                Vector3 instPos = camera.ScreenToWorldPoint(mousePos);
+
+                instPos.z = 1;
+                activeAnalog = Instantiate(analogPrefab, instPos, Quaternion.identity);
+                
+            }
+            //We've already set anchor
+            else
+            {
+                nextTouchPointMove = Input.mousePosition;
+            }
+        }
+        else
+        {
+            hasTouchedMove = false;
+            if (activeAnalog != null)
+            {
+                Destroy(activeAnalog);
+            }
+        }
+        
+        if (hasTouchedMove)
+        {
+            Vector2 move = CalculateMoveDifference();
+            MovePlayer(move.x, move.y);
+
+            activeAnalog.GetComponent<AnalogMoverScript>().MoveStick(move.x, move.y);
+        }
+    }
+
+    private void CalculateCameraDistance()
+    {
+        Vector3 camPosition = camera.transform.position;
+        Vector3 mousePositionPix = Input.mousePosition;
+        mousePositionPix.z = Mathf.Abs(camera.transform.position.z);
+
+        Vector3 mousePositionWorld = camera.ScreenToWorldPoint(mousePositionPix);
+        Debug.Log(mousePositionWorld);
+    }
+
     private void CheckPhoneControls()
     {
         for (int i = 0; i < Input.touchCount; i++)
@@ -46,7 +112,7 @@ public class PlayerMovement : MonoBehaviour
             Touch t = Input.touches[i];
             Debug.Log("Position: " + CheckCoordinates(t.position));
 
-            if (CheckCoordinates(t.position) == "LD")
+            if (CheckCoordinates(t.position) == ScreenLocation.LD)
             {
                 if (hasTouchedMove == false)
                 {
@@ -97,7 +163,7 @@ public class PlayerMovement : MonoBehaviour
         return new Vector2(percDiffHor, percDiffVer);
     }
 
-    private string CheckCoordinates(Vector2 touchPoint)
+    private ScreenLocation CheckCoordinates(Vector2 touchPoint)
     {
         //Right
         if(touchPoint.x >= Screen.width/2)
@@ -105,12 +171,12 @@ public class PlayerMovement : MonoBehaviour
             //Up
             if(touchPoint.y >= Screen.height/2)
             {
-                return "RU";
+                return ScreenLocation.RU;
             }
             //Down
             else
             {
-                return "RD";
+                return ScreenLocation.RD;
             }
         }
         //Left
@@ -119,12 +185,12 @@ public class PlayerMovement : MonoBehaviour
             //Up
             if (touchPoint.y >= Screen.height / 2)
             {
-                return "LU";
+                return ScreenLocation.LU;
             }
             //Down
             else
             {
-                return "LD";
+                return ScreenLocation.LD;
             }
         }
     }
@@ -155,7 +221,17 @@ public class PlayerMovement : MonoBehaviour
 
     private void MovePlayer(float horizontal, float vertical)
     {
-        //body.AddForce(new Vector3(horizontal, 0, vertical), ForceMode.Impulse);
-        body.transform.position += new Vector3(horizontal, 0, vertical) * moveSpeed * moveMultiplier;
+        body.transform.position += CapMoveSpeed(horizontal, vertical);
+    }
+
+    private Vector3 CapMoveSpeed(float hor, float ver)
+    {
+        Vector3 toMove = new Vector3(hor, 0, ver) * moveSpeed;
+        if(toMove.magnitude > maxSpeed)
+        {
+            float multi = maxSpeed / toMove.magnitude;
+            toMove = toMove * multi;
+        }
+        return toMove;
     }
 }
